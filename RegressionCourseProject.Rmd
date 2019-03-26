@@ -1,0 +1,101 @@
+---
+title: "Transmission System vs Fuel Efficiency"
+author: "Simin Talebpour"
+---
+###Executive Summary
+In this project I want to analyze **mtcars** dataset(a collection of cars), to explore the relationship between a set of variables and miles per gallon (MPG). I'm particularly interested in the following two questions:  
+  -Is an automatic or manual transmission better for MPG?  
+  -Quantify the MPG difference between automatic and manual transmissions?  
+  
+###Exploratory Data Analyses
+```{r echo=FALSE, warning = FALSE , message=FALSE,'load required packages'}
+# Load required packages 
+library(ggplot2)
+library(knitr)
+```
+
+```{r echo=FALSE, 'load mtcars Dataset'}
+require(datasets)
+data(mtcars)
+```
+
+```{r echo=FALSE}
+str(mtcars)
+```
+The mtcars dataset consists of 32 observations of 11 (numeric) variables.  
+Looking at the box plot(Fig-1), I can say that manual cars are more gas efficient. I can verify that with a hypothesis test of simple linear regression.
+
+###Inference in Regression 
+I want to know if there is significant evidence that 'mph' depends on transmission system('am' variable)? Applying a simple regression, answers this question. Regression conducts a hypothesis test on the slope of the regression line using t-test methods to test the following hypothesis:  
+  - Is the slope(coefficient for 'am') significantly different from zero?
+```{r,'Regression'}
+fit <- lm(mpg ~ factor(am), data = mtcars)
+summary(fit)$coef
+```
+
+The P-value of 2.850207e-04 is significant(smaller than 0.05), so I reject the null hypothesis meaning that slope in my regression model is not zero, therefore it's statistically significant, so the result shows that the transmission system effects fuel consumption.  
+
+###Model Selection
+I want to find a model that includes all the important variables to predict the outcome. First I fit a model that includes all the variables. 
+
+```{r, echo='False', eval='FALSE', 'use all variables'}
+fit_all <- lm(mpg ~ cyl+disp+hp+drat+wt+qsec+factor(vs)+factor(am)+gear+carb, data = mtcars)
+```
+Looking at the results in Table_1, I find none of the variables statistically significant(all p-vales are geater than 0.05). I need the best selection of variables. setp() function does it by implementing Stepwise regression.
+
+```{r, 'find the best fit by step function'}
+library(MASS)
+step <- step(fit_all, direction="both", trace=FALSE)
+summary(step)$coeff
+sprintf('Adjusted R-squared: %f', summary(step)$adj.r.squared)
+```
+according to this result, the best fit is:  
+Bestfit <- lm(mpg ~ wt+qsec+factor(am), data = mtcars)    
+  
+The best model says that fuel consumption in cars mostly depends on the car's weight(wt), quarter mile time(qsec) and transmission system(am), and. The adjusted R-squared is 83% which means that the model explains 83% of the variation in mpg, indicating it is a robust model.  
+Based on the best model results, the mean of 'mpg' for cars with manual transmission system is 2.94 more than automatic transmission cars. We found a differnt value in this model from the simple linear regression model(which was 7.24), and that's because I adjusted first fit with other varialbes(wt, qsec).
+
+###Diagnostics
+These are the results of my diagnostic plots(Fig-2):  
+**Residuals vs Fitted:** Residuals are patternless, they are randomly distributed above and below zero. that is a good indication that I don't have non-linear relationships.  
+**Normal Q-Q:** This plot shows if residuals are normally distributed, and they follow a straight line. The points are normally distributed around the line which is good.  
+**Scale-Location:**  This plot shows if residuals are spread equally along the ranges of predictors. It's good if you see a horizontal line, but unfortunatly it's not our case here.  
+**Residulas vs Leverage:** This plot helps us to find influential cases. We Look for cases outside of a dashed line, those are influential to the regression results. There is no influential case in this plot.  
+
+###Conclusion
+Based on my Analysis, I can say that in terms of fuel efficiency, a manual transmission is a better option than automatic. Holding all other variables constant, on average, 'mph' in manual cars is 2.94 more than automatic cars. The best model I found explains 83% of the variability in the response variable(mpg).
+
+
+###Appendix
+
+
+#### Fig_1
+
+```{r echo=FALSE, warning = FALSE, fig.height=3, fig.width = 6,'box plot for mpg'}
+library(ggplot2)
+ggplot(mtcars, aes(x = factor(am, labels = c('Automatic', 'Manual')), y = mpg)) +
+  geom_boxplot( aes(fill = factor(am)) )+
+  ggtitle("MPG for Each Transmission System Type")+
+  xlab("Transmission System")+
+  ylab("MPG")+  
+  labs(fill = "Transmission System")
+      
+```
+
+
+####Table_1
+```{r, echo='FALSE', eval='TRUE' ,'result use all variables'}
+summary(fit_all)$coeff
+```
+#### Stepwise Regression
+
+The general idea behind the stepwise regression procedure is that we build our regression model from a set of candidate predictor variables by entering and removing predictors - in a stepwise manner - into our model until there is no justifiable reason to enter or remove any more.
+
+Refrence: https://newonlinecourses.science.psu.edu/stat501/node/329/
+
+#### Fig-2
+```{r, , fig.height = 10,'Residulas and Diagnostic Plots'}
+Bestfit <- lm(mpg ~ wt+qsec+factor(am), data = mtcars)    
+par(mfrow = c(2,2))
+plot(Bestfit)
+```
